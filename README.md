@@ -5,6 +5,9 @@ Photos et vidéos d'un dossier (sous-dossiers compris), classées par date de pr
 **Essayer en ligne : <https://vivien7806.github.io/viviMemories/>**. Tout se passe dans le navigateur : les fichiers
 ne quittent pas l'ordinateur. Seul ffmpeg.wasm est téléchargé, si une vidéo l'exige.
 
+**Application Windows : [dernière version](https://github.com/vivien7806/viviMemories/releases/latest)**, avec
+ouverture par clic droit sur un dossier, ffmpeg natif, rotation et filtre anti-vent.
+
 ![Page d'accueil](docs/accueil.jpg)
 
 Un seul code TypeScript, deux versions : une page web autonome (`dist/web/index.html`) et une application Electron,
