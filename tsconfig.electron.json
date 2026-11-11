@@ -1,0 +1,15 @@
+{
+  // Processus principal et preload d'Electron, compilés en CommonJS par tsc
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "rootDir": "src",
+    "outDir": "dist/app"
+  },
+  "include": ["src/electron", "src/shared"]
+}

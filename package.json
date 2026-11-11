@@ -1,0 +1,95 @@
+{
+  "name": "vivimemories",
+  "productName": "viviMemories",
+  "version": "4.5.0",
+  "description": "Photos et vidéos d'un dossier, classées par date et enchaînées en plein écran",
+  "author": "Vivien M (https://github.com/vivien7806)",
+  "license": "GPL-3.0-or-later",
+  "homepage": "https://vivien7806.github.io/viviMemories/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vivien7806/viviMemories.git"
+  },
+  "private": true,
+  "main": "dist/app/electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.electron.json --noEmit",
+    "build:web": "vite build",
+    "build:pages": "sh scripts/build-pages.sh",
+    "build:app": "tsc -p tsconfig.electron.json",
+    "build": "npm run typecheck && npm run build:web && npm run build:app",
+    "start": "npm run build && electron .",
+    "dist:linux": "npm run build && electron-builder --linux",
+    "dist:win": "npm run build && electron-builder --win",
+    "test": "vitest run",
+    "test:e2e": "npm run build && playwright test",
+    "dist:win:docker": "sh scripts/build-windows.sh"
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.3.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^26.6.5",
+    "coi-serviceworker": "^0.1.7",
+    "electron": "^45.0.0",
+    "electron-builder": "^26.18.0",
+    "mediabunny": "^1.65.2",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vite-plugin-singlefile": "^2.3.4",
+    "vitest": "^5.0.5"
+  },
+  "build": {
+    "appId": "fr.vivien.vivimemories",
+    "productName": "viviMemories",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*"
+    ],
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "include": "build/installer.nsh"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Graphics",
+      "mimeTypes": [
+        "inode/directory"
+      ],
+      "maintainer": "Vivien M <vivien7806@users.noreply.github.com>"
+    },
+    "deb": {
+      "recommends": [
+        "ffmpeg"
+      ]
+    }
+  },
+  "allowScripts": {
+    "ffmpeg-static@5.3.0": true,
+    "electron-winstaller@5.4.0": true
+  },
+  "overrides": {
+    "@electron/asar": "^4.3.1",
+    "@electron/get": "^5.1.0",
+    "temp": {
+      "rimraf": "^6.1.2"
+    }
+  }
+}

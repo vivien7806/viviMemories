@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>viviMemories</title>
+</head>
+<body>
+
+<!-- Icônes au trait (24×24), colorées par le bouton qui les contient -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+  <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.9 1 6.7 2.7L21 8"/><path d="M21 3v5h-5"/></symbol>
+  <symbol id="i-wind" viewBox="0 0 24 24"><path d="M12.8 19.6A2 2 0 1 0 14 16H2"/><path d="M17.5 8a2.5 2.5 0 1 1 2 4H2"/><path d="M9.8 4.4A2 2 0 1 1 11 8H2"/></symbol>
+  <symbol id="i-all" viewBox="0 0 24 24"><rect x="7" y="3" width="14" height="14" rx="2"/><path d="M17 21H5a2 2 0 0 1-2-2V7"/><path d="m12.5 7.5 3.5 2.5-3.5 2.5z"/></symbol>
+  <symbol id="i-video" viewBox="0 0 24 24"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 10.5 5.2-3a.5.5 0 0 1 .8.4v8.2a.5.5 0 0 1-.8.4L16 13.5"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></symbol>
+  <symbol id="i-maximize" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></symbol>
+  <symbol id="i-minimize" viewBox="0 0 24 24"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="i-prev" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.1v13.8a1 1 0 0 0 1.5.9l11-6.9a1 1 0 0 0 0-1.7l-11-6.9A1 1 0 0 0 8 5.1z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4.5" width="4" height="15" rx="1.2" fill="currentColor" stroke="none"/><rect x="14" y="4.5" width="4" height="15" rx="1.2" fill="currentColor" stroke="none"/></symbol>
+</svg>
+
+<div id="landing">
+  <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="deck" aria-hidden="true"><span class="card c1"></span><span class="card c2"></span><span class="card c3"></span></div>
+  <h1>vivi<em>Memories</em></h1>
+  <p class="tagline">Tes photos et vidéos, classées par date de prise de vue et enchaînées en plein écran.</p>
+  <div id="dropzone">
+    <button class="btn" id="pickBtn"><span class="spinner" aria-hidden="true"></span><span id="pickLabel">Choisir un dossier</span></button>
+    <p class="drop-hint">ou glisse-le ici · sous-dossiers compris</p>
+    <label class="option" id="convertOption">
+      <input type="checkbox" id="autoConvert" checked>
+      <span id="autoConvertNote"></span>
+    </label>
+  </div>
+  <div id="scanStatus" role="status"></div>
+  <div class="keys mono">← → naviguer · Espace pause · V photos / vidéos · G aller à · R pivoter · W vent · F plein écran · I infos</div>
+</div>
+
+<div id="viewer" hidden>
+  <div id="progress"></div>
+  <div id="stage"></div>
+  <div id="zoomLevel" class="pill glass mono"></div>
+  <div id="toast" class="pill glass mono"></div>
+  <div id="stats" class="glass mono" hidden></div>
+
+  <div id="convertBar" class="glass mono" hidden>
+    <span id="convertText"></span>
+    <button class="btn small" id="replaceBtn">Remplacer l'original</button>
+    <button class="btn small ghost" id="downloadBtn">Télécharger</button>
+    <button class="btn small ghost" id="cancelBtn">Annuler</button>
+  </div>
+
+  <div id="rotateBar" class="glass mono" hidden>
+    <span id="rotateText"></span>
+    <button class="btn small" id="rotateSave">Écraser l'original</button>
+    <button class="btn small ghost" id="rotateCancel">Annuler</button>
+  </div>
+
+  <div id="chrome">
+    <div id="topbar">
+      <div id="meta" class="mono glass">
+        <span id="metaName">—</span>
+        <span id="metaLine"><svg class="icon" id="metaIcon"><use href="#i-image"/></svg><span id="metaInfo"></span></span>
+      </div>
+      <div id="topButtons">
+        <button class="square" id="gotoBtn" title="Aller à une date ou un numéro (G)"><svg class="icon"><use href="#i-search"/></svg></button>
+        <button class="square" id="rotateBtn" title="Pivoter la vidéo d'un quart de tour (R)" hidden><svg class="icon"><use href="#i-rotate"/></svg></button>
+        <button class="square" id="windBtn" title="Réduire le bruit du vent (W)" hidden><svg class="icon"><use href="#i-wind"/></svg></button>
+        <button class="square" id="filterBtn" title="Afficher : photos et vidéos (V)"><svg class="icon"><use href="#i-all"/></svg></button>
+        <button class="square" id="fullscreenBtn" title="Plein écran (F)"><svg class="icon"><use href="#i-maximize"/></svg></button>
+        <button class="square" id="closeBtn" title="Fermer"><svg class="icon"><use href="#i-close"/></svg></button>
+      </div>
+    </div>
+
+    <div id="bottombar">
+      <button class="round" id="prevBtn" title="Précédent (←)"><svg class="icon"><use href="#i-prev"/></svg></button>
+      <button class="round" id="playBtn" title="Lecture / pause (Espace)"><svg class="icon"><use href="#i-pause"/></svg></button>
+      <button class="round" id="nextBtn" title="Suivant (→)"><svg class="icon"><use href="#i-next"/></svg></button>
+    </div>
+
+    <div id="settings">
+      <span class="hint">molette = zoom · glisser = déplacer · double-clic = reset · G = aller à · V = photos / vidéos · + / − = vitesse · R / W = pivoter / vent · I = infos</span>
+      <label>photos
+        <select id="delaySelect">
+          <option value="1000">1 s</option>
+          <option value="2000">2 s</option>
+          <option value="3000">3 s</option>
+          <option value="5000" selected>5 s</option>
+          <option value="8000">8 s</option>
+          <option value="12000">12 s</option>
+          <option value="20000">20 s</option>
+        </select>
+      </label>
+      <label>vidéos
+        <select id="rateSelect">
+          <option value="0.25">0,25×</option>
+          <option value="0.5">0,5×</option>
+          <option value="0.75">0,75×</option>
+          <option value="1" selected>1×</option>
+          <option value="1.25">1,25×</option>
+          <option value="1.5">1,5×</option>
+          <option value="2">2×</option>
+          <option value="3">3×</option>
+          <option value="4">4×</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <div id="gotoPanel" hidden>
+    <div id="gotoCard">
+      <h2>Aller à…</h2>
+      <div class="row">
+        <label for="gotoNum">Numéro</label>
+        <input type="number" id="gotoNum" min="1" step="1">
+        <button class="btn small" id="gotoNumBtn">Aller</button>
+      </div>
+      <div class="hint-line mono" id="gotoNumHint"></div>
+      <div class="row">
+        <label for="gotoDate">Date</label>
+        <input type="date" id="gotoDate">
+        <input type="time" id="gotoTime" title="Heure (facultatif)">
+        <button class="btn small" id="gotoDateBtn">Aller</button>
+      </div>
+      <div class="hint-line mono" id="gotoDateHint"></div>
+      <div id="gotoError"></div>
+      <div class="row" style="justify-content:flex-end">
+        <button class="btn small ghost" id="gotoCancel">Annuler (Échap)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="./src/renderer/main.ts"></script>
+
+</body>
+</html>
