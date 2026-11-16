@@ -72,6 +72,16 @@ describe('mediaDate', () => {
     expect(date).toEqual(new Date(2018, 2, 4, 5, 6, 7));        // heure locale de l'appareil
   });
 
+  it('lit la date EXIF d’une photo ancienne numérisée', async () => {
+    const jpeg = withExif(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), '1950:08:01 11:06:47');
+    expect(await mediaDate('a.jpeg', modified, jpeg.length, reader(jpeg))).toEqual(new Date(1950, 7, 1, 11, 6, 47));
+  });
+
+  it.each(['0000:00:00 00:00:00', '1970:01:01 00:00:00'])('ignore la date EXIF par défaut %s', async exif => {
+    const jpeg = withExif(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), exif);
+    expect((await mediaDate('a.jpg', modified, jpeg.length, reader(jpeg))).getTime()).toBe(modified);
+  });
+
   it('ne lit que le début d’un gros JPEG quand la date y est', async () => {
     const jpeg = withExif(new Uint8Array([0xff, 0xd8, ...new Uint8Array(PHOTO_SIZE), 0xff, 0xd9]), '2018:03:04 05:06:07');
     const lengths: number[] = [];

@@ -52,12 +52,17 @@ export async function mediaDate(name: string, lastModified: number, size: number
   return found && found < modified ? found : modified;
 }
 
-// Date EXIF « AAAA:MM:JJ hh:mm:ss », en heure locale de l'appareil
+// Plus ancienne photographie : une date EXIF antérieure est une valeur par défaut.
+const FIRST_PHOTO_YEAR = 1826;
+// Date nulle laissée par certains appareils
+const EPOCH_DAY = '1970:01:01';
+
+/* Date EXIF « AAAA:MM:JJ hh:mm:ss », en heure locale de l'appareil.
+   Les photos anciennes numérisées peuvent porter leur vraie date. */
 function parseExifDate(s: string): Date | null {
   const m = /^(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/.exec(s);
-  if (!m) return null;
-  const date = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
-  return date.getFullYear() > 1971 ? date : null;
+  if (!m || +m[1] < FIRST_PHOTO_YEAR || s.startsWith(EPOCH_DAY)) return null;
+  return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
 }
 
 /* Segment APP1 « Exif » d'un JPEG : DateTimeOriginal, sinon DateTimeDigitized, sinon DateTime.
