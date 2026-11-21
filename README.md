@@ -56,7 +56,9 @@ GitHub Pages (`.github/workflows/pages.yml`).
 
 ## Installer
 
-- **Windows**, construit depuis WSL avec Docker : `npm run dist:win:docker`, puis `./release/viviMemories\ Setup\ *.exe`.
+- **Windows**, construit depuis WSL avec Docker : `npm run dist:win:docker`, puis `./release/viviMemories-Setup-*.exe`.
+  Chaque nouvelle version de `package.json` poussée sur `main` est publiée automatiquement (release `v<version>`
+  avec l'installeur), et la version web est redéployée sur GitHub Pages à chaque push.
   SmartScreen prévient que l'application n'est pas signée (« Informations complémentaires », « Exécuter quand
   même »). Le clic droit sur un dossier propose ensuite « Ouvrir avec viviMemories ».
 - **Linux** : `npm run dist:linux`, puis `sudo apt install ./release/vivimemories_*_amd64.deb`, ou l'AppImage sans

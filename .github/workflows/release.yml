@@ -1,0 +1,67 @@
+name: Release
+
+# Nouvelle version dans package.json : installeur Windows construit et publié (tag v<version>).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if gh release view "v$version" > /dev/null 2>&1; then echo "new=false"; else echo "new=true"; fi >> "$GITHUB_OUTPUT"
+      - if: steps.version.outputs.new == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - if: steps.version.outputs.new == 'true'
+        run: |
+          npm ci
+          npm run build
+          npx electron-builder --win --publish never
+      - if: steps.version.outputs.new == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          PAGES: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+        run: |
+          previous=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          {
+            echo "Photos et vidéos d'un dossier, classées par date de prise de vue et enchaînées en plein écran."
+            echo
+            echo "**Essayer sans rien installer : $PAGES**"
+            echo
+            echo "### Windows"
+            echo
+            echo "Télécharger \`viviMemories-Setup-$VERSION.exe\` ci-dessous et le lancer. L'installeur n'est pas signé :" \
+              "SmartScreen affiche un avertissement (« Informations complémentaires », puis « Exécuter quand même »)." \
+              "Le clic droit sur un dossier propose ensuite « Ouvrir avec viviMemories »."
+            if [ -n "$previous" ]; then
+              echo
+              echo "### Nouveautés depuis la ${previous#v}"
+              echo
+              git log -E --grep='^[0-9]+\.[0-9]+\.[0-9]+: ' --format='**%s**%n%n%b' "$previous..HEAD"
+            fi
+          } > notes.md
+          gh release create "v$VERSION" "release/viviMemories-Setup-$VERSION.exe" \
+            --target "$GITHUB_SHA" --title "viviMemories $VERSION" --notes-file notes.md

@@ -21,6 +21,6 @@ docker run --rm \
     npx electron-builder --win
   '
 
-# Exécutable depuis WSL : ./release/viviMemories\ Setup\ *.exe
+# Exécutable depuis WSL : ./release/viviMemories-Setup-*.exe
 chmod +x release/*.exe
 ls -lh release/*.exe

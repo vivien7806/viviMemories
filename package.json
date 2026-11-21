@@ -62,6 +62,7 @@
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
+      "artifactName": "${productName}-Setup-${version}.${ext}",
       "include": "build/installer.nsh"
     },
     "linux": {
