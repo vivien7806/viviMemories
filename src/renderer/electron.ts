@@ -50,7 +50,8 @@ export function electron(bridge: ViviBridge): Platform<NativeMedia> {
       };
       if (!encode) {
         live.later = call(bridge.remux(m.abs, m.date.toISOString(), progress)).then(r => r && {
-          tmp: r.tmp, size: r.size, url: mediaUrl(r.tmp), saved: false, kind: r.lossless ? 'copy' : 'preview', remux: true,
+          tmp: r.tmp, size: r.size, url: mediaUrl(r.tmp), saved: false, remux: true,
+          kind: !r.complete ? 'preview' : r.lossless ? 'copy' : 'converted', note: r.lossless ? undefined : 'image intacte, son en AAC',
         });
       }
       return live;

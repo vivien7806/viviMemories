@@ -41,11 +41,19 @@ const sourceClass = () =>
 export const canStream = () => !!sourceClass();
 export const streamSupports = (mime: string) => !!sourceClass()?.isTypeSupported(mime);
 
+// Image réencodée dans le navigateur : au plus 1920 pixels de côté, pour la lire pendant sa conversion
+export const MAX_SIDE = 1920;
+
+// Ce que perd une version qui n'est pas une copie sans perte
+export const lossNote = (videoCopied: boolean, reduced: boolean) => videoCopied
+  ? 'image intacte, son réencodé'
+  : `image réencodée, moins fidèle que l’original${reduced ? `, réduite à ${MAX_SIDE} px` : ''}`;
+
 // Flux lisible tout de suite, et fichier complet à la fin (remux : image copiée telle quelle)
 export interface Streaming {
   stream: LiveStream;
   remux: boolean;
-  file: Promise<{ blob: Blob; lossless: boolean }>;
+  file: Promise<{ blob: Blob; lossless: boolean; note?: string }>;
 }
 
 /* MP4 fragmenté produit pendant la lecture. Chaque <video> qui le lit reçoit son propre

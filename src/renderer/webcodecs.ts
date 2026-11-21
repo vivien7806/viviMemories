@@ -2,10 +2,7 @@ import {
   BlobSource, BufferTarget, Conversion, Input, MATROSKA, MP4, MPEG_TS, Mp4OutputFormat, NullTarget, Output, QTFF, Quality, WEBM,
   getFirstEncodableAudioCodec, getFirstEncodableVideoCodec, type InputTrack,
 } from 'mediabunny';
-import { canStream, LiveStream, streamSupports, type Bytes, type Streaming } from './live-stream';
-
-// Comme avec ffmpeg.wasm : au plus 1920 pixels de côté quand l'image est réencodée
-const MAX_SIDE = 1920;
+import { canStream, LiveStream, lossNote, MAX_SIDE, streamSupports, type Bytes, type Streaming } from './live-stream';
 // Conteneurs que le navigateur peut refuser alors que leurs codecs lui sont lisibles
 const FORMATS = [MPEG_TS, MATROSKA, WEBM, MP4, QTFF];
 
@@ -55,7 +52,8 @@ export async function streamWithWebCodecs(file: File, date: Date, progress: (p: 
       format: new Mp4OutputFormat({ fastStart: 'fragmented', onFtyp: push, onMoov: push, onMoof: push, onMdat: push }),
     });
     const { displayWidth: w, displayHeight: h } = video;
-    const size = Math.max(w, h) <= MAX_SIDE ? {} : w >= h ? { width: MAX_SIDE } : { height: MAX_SIDE };
+    const reduced = !copyVideo && Math.max(w, h) > MAX_SIDE;
+    const size = !reduced ? {} : w >= h ? { width: MAX_SIDE } : { height: MAX_SIDE };
     const conversion = await Conversion.init({
       input, output, tracks: 'primary', showWarnings: false,
       video: copyVideo ? {} : { forceTranscode: true, codec: videoCodec!, quality: new Quality('very-high'), ...size },
@@ -73,7 +71,8 @@ export async function streamWithWebCodecs(file: File, date: Date, progress: (p: 
     });
     const result = done.then(async () => {
       stream.end();
-      return { blob: await regularMp4(stream.blob(), date), lossless: copyVideo && copyAudio };
+      const lossless = copyVideo && copyAudio;
+      return { blob: await regularMp4(stream.blob(), date), lossless, note: lossless ? undefined : lossNote(copyVideo, reduced) };
     });
     result.catch(err => stream.fail(err));
 

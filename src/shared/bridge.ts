@@ -15,7 +15,7 @@ export interface ViviBridge {
   pathOf(file: File): string;
   onOpen(cb: (paths: string[]) => void): void;
   probe(abs: string): Promise<{ duration: number; remux: boolean }>;
-  remux(abs: string, date: string, onProgress: (p: number) => void): Promise<{ tmp: string; size: number; lossless: boolean } | null>;
+  remux(abs: string, date: string, onProgress: (p: number) => void): Promise<{ tmp: string; size: number; complete: boolean; lossless: boolean } | null>;
   denoise(abs: string, onProgress: (p: number) => void): Promise<{ tmp: string; size: number }>;
   rotate(abs: string, turns: number): Promise<void>;
   cancelConversions(): Promise<void>;

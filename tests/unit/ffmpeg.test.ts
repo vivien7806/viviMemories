@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { denoise, live, planFor, probe as probeFile, remux } from '../../src/electron/ffmpeg';
 import { rotate } from '../../src/electron/rotate';
-import { mediaDate } from '../../src/shared/media';
+import { aacBitrate, mediaDate } from '../../src/shared/media';
 import { FFMPEG, makeFixtures } from '../fixtures';
 
 const probe = (file: string) => {
@@ -28,7 +28,7 @@ describe('planFor', () => {
 
   it('remuxe le H.264 8 bits et garde un son lisible', () => {
     const plan = planFor(line('0: Video: h264 (High), yuv420p(progressive), 1920x1080') + line('1: Audio: aac (LC), 48000 Hz'));
-    expect(plan).toEqual({ video: 0, remux: true, audioOk: true, lossless: true });
+    expect(plan).toEqual({ video: 0, remux: true, audioOk: true, audioArgs: ['-c:a:0', 'copy'], complete: true, lossless: true });
   });
 
   it('réencode ce que Chromium ne décode pas', () => {
@@ -37,13 +37,25 @@ describe('planFor', () => {
     expect(planFor(line('0: Video: hevc (Main), yuv420p')).remux).toBe(false);
   });
 
-  it('passe en FLAC un son illisible, et ignore la pochette', () => {
-    const plan = planFor(line('0: Video: mjpeg, yuvj420p (attached pic)') + line('1: Video: h264, yuvj420p(pc)') + line('2: Audio: pcm_s16le'));
-    expect(plan).toMatchObject({ video: 1, remux: true, audioOk: false, lossless: true });
+  it('passe en AAC un son illisible (64 k par canal), et ignore la pochette', () => {
+    const plan = planFor(line('0: Video: mjpeg, yuvj420p (attached pic)') + line('1: Video: h264, yuvj420p(pc)') +
+      line('2: Audio: pcm_s16le, 48000 Hz, stereo') + line('3: Audio: ac3, 48000 Hz, 5.1(side), fltp, 448 kb/s'));
+    expect(plan).toMatchObject({ video: 1, remux: true, audioOk: false, complete: true, lossless: false });
+    expect(plan.audioArgs).toEqual(['-c:a:0', 'aac', '-b:a:0', '128k', '-c:a:1', 'aac', '-b:a:1', '384k']);
   });
 
   it('ne se dit pas sans perte si des sous-titres seraient perdus', () => {
-    expect(planFor(line('0: Video: h264, yuv420p') + line('1: Subtitle: subrip')).lossless).toBe(false);
+    expect(planFor(line('0: Video: h264, yuv420p') + line('1: Subtitle: subrip'))).toMatchObject({ complete: false, lossless: false });
+  });
+});
+
+describe('aacBitrate', () => {
+  it('donne 64 k par canal', () => {
+    expect(aacBitrate(', 48000 Hz, mono, fltp')).toBe('64k');
+    expect(aacBitrate(', 48000 Hz, stereo, s16')).toBe('128k');
+    expect(aacBitrate(', 48000 Hz, 5.1(side), fltp')).toBe('384k');
+    expect(aacBitrate(', 48000 Hz, 3 channels, s16')).toBe('192k');
+    expect(aacBitrate('')).toBe('128k');
   });
 });
 
@@ -65,10 +77,11 @@ describe('remux (ffmpeg natif)', () => {
     expect(info).toMatch(/Audio: aac/);
   });
 
-  it('remuxe un .avi H.264 et passe son PCM en FLAC', async () => {
-    const { lossless, info } = await run('h264.avi');
-    expect(lossless).toBe(true);
-    expect(info).toMatch(/Audio: flac/);
+  it('remuxe un .avi H.264 et passe son PCM en AAC', async () => {
+    const { complete, lossless, info } = await run('h264.avi');
+    expect(complete).toBe(true);
+    expect(lossless).toBe(false);
+    expect(info).toMatch(/Audio: aac/);
   });
 
   it('ne remuxe pas un codec illisible', async () => {

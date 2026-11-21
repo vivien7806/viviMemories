@@ -147,9 +147,10 @@ export function createConversions({ platform, stage, isPlaying, next, updated }:
     // Sans écriture directe (Firefox) : indiquer où enregistrer le fichier pour remplacer l'original.
     const size = `${(c.size / 1e6).toFixed(1)} Mo`;
     const what = { copy: 'Copie sans perte en .mp4', converted: 'Version convertie', denoised: 'Son sans vent' }[c.kind];
+    const note = c.note ? `${c.note}, ` : '';
     ui.convertText.textContent = canReplace
-      ? `${what} (${size}) : remplacer ${item.name} ?`
-      : `Version convertie : enregistre-la dans « ${folderOf(item)} » à la place de ${item.name}.`;
+      ? `${what} (${note}${size}) : remplacer ${item.name} ?`
+      : `Version convertie (${note}${size}) : enregistre-la dans « ${folderOf(item)} » à la place de ${item.name}.`;
   }
 
   ui.replaceBtn.addEventListener('click', async () => {

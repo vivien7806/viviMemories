@@ -8,6 +8,7 @@ export interface Converted {
   size: number;
   saved: boolean;
   kind: 'copy' | 'converted' | 'preview' | 'denoised';
+  note?: string;         // ce que la version convertie perd, dit avant de proposer le remplacement
   duration?: number;     // lue à la volée : la vidéo ne connaît pas sa durée
   remux?: boolean;       // image copiée telle quelle : si elle reste illisible, on la réencode
   attach?(v: HTMLVideoElement): void;    // flux à brancher sur la vidéo (MediaSource), à la place de url

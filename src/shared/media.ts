@@ -41,6 +41,16 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
 // Vidéos qu'on sait tourner et filtrer sans changer de format
 export const isEditable = (name: string) => QUICKTIME.test(extOf(name));
 
+/* Débit AAC d'une piste son d'après sa description par ffmpeg (« 48000 Hz, stereo, … ») :
+   64 k par canal, comme videoToHevc. Recopiée telle quelle dans le worker ffmpeg.wasm :
+   ne doit dépendre de rien d'extérieur. */
+export function aacBitrate(info: string) {
+  const KBPS_PER_CHANNEL = 64, MONO = 1, STEREO = 2;
+  const m = /\b(mono|stereo|(\d+)\.(\d+)|(\d+) channels)\b/.exec(info);
+  const channels = !m || m[1] === 'stereo' ? STEREO : m[1] === 'mono' ? MONO : m[4] ? +m[4] : +m[2] + +m[3];
+  return `${KBPS_PER_CHANNEL * channels}k`;
+}
+
 /* La plus ancienne des dates connues : modification du fichier, prise de vue (EXIF) ou
    création (en-tête QuickTime). Copier ou convertir un fichier ne change pas le classement. */
 export async function mediaDate(name: string, lastModified: number, size: number, read: ReadAt): Promise<Date> {

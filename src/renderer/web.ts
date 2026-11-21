@@ -18,8 +18,8 @@ const CAN_WRITE = typeof window.showDirectoryPicker === 'function';
 // Firefox refuse le type « video/quicktime » même quand le contenu est lisible : on réétiquette.
 const MIME_FIX: Record<string, string> = { mov: 'video/mp4', m4v: 'video/mp4', '3gp': 'video/mp4', mkv: 'video/webm' };
 
-const finished = ({ blob, lossless }: Awaited<Streaming['file']>): WebConverted =>
-  ({ blob, url: URL.createObjectURL(blob), size: blob.size, saved: false, kind: lossless ? 'copy' : 'converted' });
+const finished = ({ blob, lossless, note }: Awaited<Streaming['file']>): WebConverted =>
+  ({ blob, url: URL.createObjectURL(blob), size: blob.size, saved: false, kind: lossless ? 'copy' : 'converted', note });
 
 type Found = { file: File; path: string; dir: FileSystemDirectoryHandle | null };
 

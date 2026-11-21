@@ -6,7 +6,7 @@ import { delimiter, extname, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { Readable } from 'node:stream';
 import ffmpegStatic from 'ffmpeg-static';
-import { isEditable } from '../shared/media';
+import { aacBitrate, isEditable } from '../shared/media';
 
 const inPath = (name: string) => (process.env.PATH ?? '').split(delimiter)
   .map(dir => join(dir, name)).find(p => existsSync(p));
@@ -56,15 +56,21 @@ export function streamsOf(probe: string): Stream[] {
     .map(m => ({ index: +m[1], kind: m[2], codec: m[3], info: m[4] }));
 }
 
-/* Remux sans perte quand l'image est lisible par Chromium : seul le conteneur change, et un son
-   non lisible passe en FLAC (sans perte). Sinon, l'image est réencodée par live(). */
+/* Remux quand l'image est lisible par Chromium : elle est copiée telle quelle, et un son non
+   lisible passe en AAC, comme avec videoToHevc. Sinon, l'image est réencodée par live().
+   complete : rien n'est perdu (sous-titres) · lossless : son copié lui aussi. */
 export function planFor(probe: string) {
   const streams = streamsOf(probe);
   const video = streams.find(s => s.kind === 'Video' && !s.info.includes('attached pic'));
   if (!video) throw new Error('aucune piste vidéo');
-  const audioOk = streams.filter(s => s.kind === 'Audio').every(s => PLAYABLE_AUDIO.test(s.codec));
+  const audio = streams.filter(s => s.kind === 'Audio');
+  const audioOk = audio.every(s => PLAYABLE_AUDIO.test(s.codec));
+  const audioArgs = audio.flatMap((s, i) => PLAYABLE_AUDIO.test(s.codec)
+    ? [`-c:a:${i}`, 'copy']
+    : [`-c:a:${i}`, 'aac', `-b:a:${i}`, aacBitrate(s.info)]);
   const remux = PLAYABLE_VIDEO.test(video.codec) && /\byuvj?420p\b/.test(video.info);
-  return { video: video.index, remux, audioOk, lossless: remux && !streams.some(s => s.kind === 'Subtitle') };
+  const complete = remux && !streams.some(s => s.kind === 'Subtitle');
+  return { video: video.index, remux, audioOk, audioArgs, complete, lossless: complete && audioOk };
 }
 
 const probeOf = async (input: string) => (await run(['-hide_banner', '-i', input])).log;
@@ -90,8 +96,20 @@ export async function probe(input: string) {
   return { duration: durationOf(info), remux: planFor(info).remux };
 }
 
-/* Copie sans perte dans un .mp4, préparée pendant la lecture à la volée pour pouvoir remplacer
-   l'original. null si l'image n'est pas lisible telle quelle ou si ffmpeg échoue. */
+// Nombre d'images de la piste vidéo, comptées sans les décoder (-1 si ffmpeg échoue)
+async function frameCount(input: string, map: string) {
+  let frames = 0;
+  const { code } = await run(['-hide_banner', '-nostats', '-progress', 'pipe:1',
+    '-i', input, '-map', map, '-c', 'copy', '-f', 'null', '-'], line => {
+    const m = /^frame=(\d+)/.exec(line);
+    if (m) frames = +m[1];
+  });
+  return code === 0 ? frames : -1;
+}
+
+/* Copie de l'image dans un .mp4, préparée pendant la lecture à la volée pour pouvoir remplacer
+   l'original. null si l'image n'est pas lisible telle quelle, si ffmpeg échoue ou si des images
+   manquent (vérifié comme videoToHevc avant de mettre l'original à la corbeille). */
 export async function remux(input: string, date: string, tmpDir: string, progress: (p: number) => void) {
   const info = await probeOf(input);
   const plan = planFor(info);
@@ -101,15 +119,17 @@ export async function remux(input: string, date: string, tmpDir: string, progres
   const result = await run([
     '-hide_banner', '-nostats', '-progress', 'pipe:1',
     '-i', input, '-map', `0:${plan.video}`, '-map', '0:a?',
-    '-c:v', 'copy', '-c:a', plan.audioOk ? 'copy' : 'flac',
+    '-c:v', 'copy', ...plan.audioArgs,
     '-map_metadata', '0', '-metadata', 'creation_time=' + date,
     '-movflags', '+faststart', '-y', output,
   ], progressLines(info, progress));
-  if (result.code !== 0) {
+  const ok = result.code === 0 && await Promise.all([frameCount(input, `0:${plan.video}`), frameCount(output, '0:v:0')])
+    .then(([before, after]) => before > 0 && before === after);
+  if (!ok) {
     await rm(output, { force: true });
     return null;
   }
-  return { tmp: output, size: (await stat(output)).size, lossless: plan.lossless };
+  return { tmp: output, size: (await stat(output)).size, complete: plan.complete, lossless: plan.lossless };
 }
 
 /* Lecture à la volée, en MP4 fragmenté écrit sur la sortie standard : la vidéo démarre dès le

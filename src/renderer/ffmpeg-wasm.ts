@@ -1,5 +1,5 @@
-import { extOf } from '../shared/media';
-import { LiveStream, type Streaming } from './live-stream';
+import { aacBitrate, extOf } from '../shared/media';
+import { LiveStream, lossNote, MAX_SIDE, type Streaming } from './live-stream';
 
 /* Le cœur ffmpeg (~30 Mo) est téléchargé depuis jsDelivr à la première conversion.
    Son code est collé en tête d'un worker créé localement : en file://, un worker n'a pas
@@ -12,8 +12,8 @@ const FRAGMENT_US = 500_000;
    de plus ne peut pas démarrer pendant la conversion (blocage). */
 const THREADS = MULTITHREAD ? 4 : 1;
 
-// Sérialisée avec toString() : ne doit dépendre de rien d'extérieur.
-function ffmpegWorker() {
+// Sérialisée avec toString() : ne doit dépendre de rien d'extérieur (aacBitrate lui est passée).
+function ffmpegWorker(bitrateOf: typeof aacBitrate) {
   let core: any = null;
   let log: string[] = [];
   let onProgress = (_p: number) => {};
@@ -33,8 +33,14 @@ function ffmpegWorker() {
 
       log = [];
       run(['-hide_banner', '-i', input]);
+      const info = log.join('\n');
       // Image déjà en H.264 8 bits : copiée telle quelle (sans perte, quasi instantané).
-      const canCopy = data.copy && /Video: h264.*\byuv420p[(,]/.test(log.join('\n'));
+      const canCopy = data.copy && /Video: h264.*\byuv420p[(,]/.test(info);
+      // Son en AAC copié lui aussi, sinon converti en AAC comme avec videoToHevc
+      const audio = /Audio: (\w+)(.*)/.exec(info);
+      const copyAudio = !audio || audio[1] === 'aac';
+      const size = /Video: .*?, (\d+)x(\d+)/.exec(info);
+      const reduced = !!size && Math.max(+size[1], +size[2]) > data.maxSide;
 
       // Envoie ce que ffmpeg a ajouté au fichier de sortie depuis le dernier envoi.
       let sent = 0;
@@ -53,24 +59,28 @@ function ffmpegWorker() {
 
       // MP4 fragmenté : lisible pendant sa fabrication.
       const threads = ['-threads', String(data.threads)];
-      const args = (copy: boolean) => [
+      const args = (copy: boolean, copySound: boolean) => [
         ...threads, '-i', input, '-map', '0:v:0', '-map', '0:a:0?', ...threads,
         ...(copy ? ['-c:v', 'copy'] : [
-          '-vf', "scale='min(1920,iw)':'min(1920,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2",
+          '-vf', `bwdif=mode=send_frame:deint=interlaced,scale='min(${data.maxSide},iw)':'min(${data.maxSide},ih)'` +
+            ':force_original_aspect_ratio=decrease:force_divisible_by=2',
           '-c:v', 'libx264', '-preset', 'superfast', '-crf', '22', '-pix_fmt', 'yuv420p',
         ]),
-        '-c:a', 'aac', '-b:a', '160k',
+        ...(copySound ? ['-c:a', 'copy'] : ['-c:a', 'aac', '-b:a', bitrateOf(audio?.[2] ?? '')]),
         '-map_metadata', '0', '-metadata', 'creation_time=' + data.date,
         '-movflags', 'empty_moov+default_base_moof', '-frag_duration', String(data.fragment),
         '-f', 'mp4', '-y', output,
       ];
       log = [];
       self.postMessage({ type: 'mode', copy: canCopy });
-      let code = canCopy ? run(args(true)) : 1;
-      if (code !== 0 && sent === 0) {
+      let copied = canCopy, soundCopied = copyAudio;
+      let code = run(args(canCopy, copyAudio));
+      // Échec avant la première image : tout est réencodé
+      if (code !== 0 && sent === 0 && (copied || soundCopied)) {
+        copied = soundCopied = false;
         log = [];
         self.postMessage({ type: 'mode', copy: false });
-        code = run(args(false));
+        code = run(args(false, false));
       }
       flush();
       onProgress = () => {};
@@ -81,7 +91,8 @@ function ffmpegWorker() {
         out = core.FS.readFile(final);
       }
       for (const f of [input, output, final]) { try { core.FS.unlink(f); } catch {} }
-      self.postMessage({ type: 'done', out, log: log.slice(-4).join(' | ') }, { transfer: out ? [out.buffer] : [] });
+      self.postMessage({ type: 'done', out, copied, soundCopied, reduced: reduced && !copied, log: log.slice(-4).join(' | ') },
+        { transfer: out ? [out.buffer] : [] });
     } catch (e: any) {
       self.postMessage({ type: 'error', message: String((e && e.message) || e) });
     }
@@ -144,7 +155,7 @@ function startWorker(say: (text: string) => void) {
     const mainScript = MULTITHREAD
       ? `${scriptUrl(js)}#${btoa(JSON.stringify({ wasmURL: '', workerURL: scriptUrl(threadJs) }))}`
       : undefined;
-    const url = URL.createObjectURL(new Blob([js, `\n;(${ffmpegWorker})();`], { type: 'text/javascript' }));
+    const url = URL.createObjectURL(new Blob([js, `\n;(${ffmpegWorker})(${aacBitrate});`], { type: 'text/javascript' }));
     worker = new Worker(url);
     URL.revokeObjectURL(url);
     await new Promise((resolve, reject) => {
@@ -161,14 +172,15 @@ export async function streamWithFfmpeg(file: File, date: Date, say: (text: strin
   progress(0);
   const stream = new LiveStream(true);
   let remux = false;
-  const result = new Promise<{ blob: Blob; lossless: boolean }>((resolve, reject) => {
+  const result: Streaming['file'] = new Promise((resolve, reject) => {
     listen({
       mode: d => { remux = d.copy; },
       chunk: d => stream.push(d.chunk),
       progress: d => progress(d.progress),
       done: d => {
         stream.end();
-        if (d.out) resolve({ blob: new Blob([d.out], { type: 'video/mp4' }), lossless: false });
+        const lossless = d.copied && d.soundCopied;
+        if (d.out) resolve({ blob: new Blob([d.out], { type: 'video/mp4' }), lossless, note: lossless ? undefined : lossNote(d.copied, d.reduced) });
         else reject(new Error('ffmpeg a échoué' + (d.log ? ` (${d.log})` : '')));
       },
       error: d => {
@@ -177,7 +189,7 @@ export async function streamWithFfmpeg(file: File, date: Date, say: (text: strin
       },
     });
     worker!.postMessage({
-      type: 'convert', file, copy, fragment: FRAGMENT_US, threads: THREADS,
+      type: 'convert', file, copy, fragment: FRAGMENT_US, threads: THREADS, maxSide: MAX_SIDE,
       ext: extOf(file.name).replace(/[^a-z0-9]/g, '') || 'bin', date: date.toISOString(),
     });
   });

@@ -110,11 +110,11 @@ test('remuxe sans perte un .mts et remplace l’original', async () => {
   expect(statSync(join(dir, 'cam.mp4')).mtimeMs).toBe(mtime);
 });
 
-test('lit un .avi H.264 avec son PCM, passé en FLAC', async () => {
+test('lit un .avi H.264 avec son PCM, passé en AAC', async () => {
   await launch([dir]);
   await goTo('h264.avi');
   await page.keyboard.press(' ');                            // pause : le clip d'1 s passerait au suivant
-  await expect(page.locator('#convertText')).toContainText('Copie sans perte', { timeout: 30_000 });
+  await expect(page.locator('#convertText')).toContainText('Version convertie (image intacte, son en AAC', { timeout: 30_000 });
   await expect.poll(videoWidth).toBe(320);
   await expect.poll(() => video().evaluate((v: HTMLVideoElement & { webkitAudioDecodedByteCount: number }) =>
     v.webkitAudioDecodedByteCount)).toBeGreaterThan(0);
