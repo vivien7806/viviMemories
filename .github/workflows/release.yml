@@ -65,3 +65,10 @@ jobs:
           } > notes.md
           gh release create "v$VERSION" "release/viviMemories-Setup-$VERSION.exe" \
             --target "$GITHUB_SHA" --title "viviMemories $VERSION" --notes-file notes.md
+      # Seule la dernière release est gardée ; les tags restent (notes de la suivante)
+      - if: steps.version.outputs.new == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release list --limit 100 --json tagName --jq '.[].tagName' | { grep -vx "v$VERSION" || true; } |
+            while read -r tag; do gh release delete "$tag" --yes; done
