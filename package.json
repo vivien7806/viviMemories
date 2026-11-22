@@ -23,7 +23,7 @@
     "dist:linux": "npm run build && electron-builder --linux",
     "dist:win": "npm run build && electron-builder --win",
     "test": "vitest run",
-    "test:e2e": "npm run build && playwright test",
+    "test:e2e": "npm run build && sh scripts/e2e.sh",
     "dist:win:docker": "sh scripts/build-windows.sh"
   },
   "dependencies": {

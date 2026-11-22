@@ -145,13 +145,22 @@ html,body{
 }
 .notice .btn{ margin-top:14px; }
 
-/* Barre de progression : fine, lumineuse, discrète au repos */
+/* Barre de progression : fine, lumineuse, discrète au repos ; sur une vidéo, un curseur rond à glisser */
+#seekbar{ position:absolute; top:0; left:0; right:0; height:14px; z-index:5; pointer-events:none; touch-action:none; }
+#seekbar.video{ pointer-events:auto; cursor:pointer; }
 #progress{
-  position:absolute; top:0; left:0; height:2px; width:0; z-index:5; pointer-events:none;
+  position:absolute; top:0; left:0; height:2px; width:0;
   background:var(--grad); box-shadow:0 0 12px rgba(233,115,140,.7);
   opacity:.75; transition:width .08s linear, opacity .4s;
 }
+#seekbar.dragging #progress{ transition:opacity .4s; }
+/* Demi-bulle : un disque centré sur le bord haut de l'écran */
+#seekbar.video #progress::after{
+  content:''; position:absolute; top:-5px; right:-5px; width:10px; height:10px; border-radius:50%;
+  background:rgba(255,255,255,.7); box-shadow:0 0 6px rgba(233,115,140,.6); transition:opacity .4s;
+}
 #viewer.idle #progress{ opacity:.25; }
+#viewer.idle #progress::after{ opacity:0; }
 
 .pill{
   position:absolute; z-index:6; padding:6px 12px; font-size:12px; color:var(--ink-dim); border-radius:999px;

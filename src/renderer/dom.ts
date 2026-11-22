@@ -10,7 +10,7 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string) => {
 export const ui = {
   landing: $('landing'), dropzone: $('dropzone'), pickBtn: $<HTMLButtonElement>('pickBtn'), pickLabel: $('pickLabel'),
   autoConvert: $<HTMLInputElement>('autoConvert'), convertOption: $('convertOption'), autoConvertNote: $('autoConvertNote'), scanStatus: $('scanStatus'),
-  viewer: $('viewer'), stage: $('stage'), progress: $('progress'), zoomLevel: $('zoomLevel'), toast: $('toast'), stats: $('stats'),
+  viewer: $('viewer'), stage: $('stage'), seekbar: $('seekbar'), progress: $('progress'), zoomLevel: $('zoomLevel'), toast: $('toast'), stats: $('stats'),
   convertBar: $('convertBar'), convertText: $('convertText'),
   replaceBtn: $<HTMLButtonElement>('replaceBtn'), downloadBtn: $<HTMLButtonElement>('downloadBtn'), cancelBtn: $<HTMLButtonElement>('cancelBtn'),
   rotateBar: $('rotateBar'), rotateText: $('rotateText'),

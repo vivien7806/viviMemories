@@ -177,3 +177,39 @@ test('zoome à la molette, Échap dézoome sans fermer, + accélère', async ({ 
   await page.keyboard.press('+');
   await expect(page.locator('#toast')).toContainText('Photos : 3 s par image');
 });
+
+test('glisse le curseur de la barre du haut, clic à gauche recule de 10 s', async ({ page }) => {
+  await dropFolder(page);
+  await expect(meta(page).name).toHaveText(ORDER[0]);
+  await goTo(page, ORDER.indexOf('clip.mp4') + 1);
+  await page.keyboard.press(' ');                                              // pause
+  const time = () => page.locator('#stage video').evaluate((v: HTMLVideoElement) => v.currentTime);
+
+  const bar = (await page.locator('#seekbar').boundingBox())!;
+  await page.mouse.move(bar.x + 1, bar.y + 5);
+  await page.mouse.down();
+  await page.mouse.move(bar.x + bar.width / 2, bar.y + 5);
+  await page.mouse.up();
+  await expect.poll(time).toBeCloseTo(0.5, 1);
+
+  await page.mouse.click(bar.x + bar.width / 4, 360);
+  await expect.poll(time).toBe(0);
+  await expect(page.locator('#toast')).toContainText('−10 s');
+});
+
+test('appui maintenu sur la vidéo : 2× jusqu’au relâchement, sans saut', async ({ page }) => {
+  await dropFolder(page);
+  await expect(meta(page).name).toHaveText(ORDER[0]);
+  await goTo(page, ORDER.indexOf('clip.mp4') + 1);
+  await page.keyboard.press(' ');                                              // pause
+  const video = page.locator('#stage video');
+  const rate = () => video.evaluate((v: HTMLVideoElement) => v.playbackRate);
+  await video.evaluate((v: HTMLVideoElement) => { v.currentTime = 0.5; });
+
+  await page.mouse.move(900, 360);
+  await page.mouse.down();
+  await expect.poll(rate).toBe(2);
+  await page.mouse.up();
+  await expect.poll(rate).toBe(1);
+  expect(await video.evaluate((v: HTMLVideoElement) => v.currentTime)).toBeCloseTo(0.5, 1);
+});

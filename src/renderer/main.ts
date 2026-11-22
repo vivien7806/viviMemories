@@ -10,6 +10,7 @@ import { createConversions } from './conversion';
 import { createEdits } from './edits';
 import { createGoto } from './goto';
 import { createStats } from './stats';
+import { createSeek } from './seek';
 
 const platform: Platform = window.vivi ? electron(window.vivi) : web;
 const UI_HIDE_DELAY = 2800;
@@ -31,6 +32,7 @@ const stage = new Stage(ui.stage, playlist, platform, playbackRate, {
     zoom.reset(el);
     imgFrac = 0;
     ui.progress.style.width = '0';
+    seek.attach(el);
     updateMeta();
     conversions.updateBar();
     edits.show(m, el);
@@ -58,6 +60,7 @@ const edits = createEdits({ platform, stage, enqueue: conversions.enqueue });
 
 const goto = createGoto({ playlist, setPlaying, isPlaying: () => playing, show: () => stage.show(), wake: wakeUI });
 const stats = createStats(platform, node);
+const seek = createSeek({ node, shown: () => stage.shown, zoomed: () => zoom.active, playbackRate });
 
 /* =====================================================================
    Choix du dossier
@@ -142,10 +145,7 @@ function updateMeta() {
 }
 
 function watchVideo(v: HTMLVideoElement, item: Media) {
-  v.addEventListener('timeupdate', () => {
-    const duration = item.converted?.duration || v.duration;
-    if (node() === v && duration) ui.progress.style.width = (v.currentTime / duration * 100) + '%';
-  });
+  v.addEventListener('timeupdate', () => { if (node() === v) seek.show(v); });
   v.addEventListener('ended', () => { if (node() === v && playing) goNext(); });
   v.addEventListener('error', () => { if (node() === v) conversions.showUnreadable(v, item); });
   // Codec vidéo non supporté : le son peut jouer, mais aucune image n'est décodée.

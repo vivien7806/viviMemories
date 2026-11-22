@@ -38,6 +38,8 @@ n'envoie pas ces en-têtes : la version en ligne les ajoute avec un service work
 ← → naviguer · Espace pause · V photos / vidéos · G aller à un numéro ou une date · + / − vitesse ·
 F plein écran · Échap fermer · I infos de lecture · R pivoter · W vent
 
+Vidéo : glisser le curseur de la barre du haut, ou cliquer à gauche / à droite de l'image pour reculer / avancer de 10 s ; rester appuyé lit en 2× jusqu'au relâchement.
+
 ## Développer
 
 Prérequis : Node.js 22+.
@@ -47,7 +49,7 @@ npm install
 npm start [-- ~/Images/Vacances]   # application Electron
 npm run dev                        # version web : http://localhost:5173
 npm test                           # tests unitaires
-npm run test:e2e                   # tests Playwright (avant : npx playwright install chromium)
+npm run test:e2e                   # tests Playwright (avant : npx playwright install chromium), sans fenêtre si xvfb-run est installé
 npm run build:pages                # version en ligne, dans dist/web
 ```
 
