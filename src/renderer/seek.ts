@@ -3,7 +3,7 @@ import type { Media } from './platform';
 
 const JUMP = 10;                 // secondes, clic à gauche ou à droite de la vidéo
 const HOLD_DELAY = 400;          // appui maintenu sur la vidéo : lecture accélérée
-const HOLD_RATE = 2;
+const HOLD_FACTOR = 2;
 
 interface Deps {
   node(): Element | null;
@@ -14,7 +14,7 @@ interface Deps {
 
 /* Barre de progression : son curseur se glisse pour se déplacer dans la vidéo.
    Clic sur la moitié gauche ou droite de la vidéo : recule ou avance de 10 s.
-   Appui maintenu : lecture en 2× jusqu'au relâchement. */
+   Appui maintenu : vitesse doublée jusqu'au relâchement. */
 export function createSeek({ node, shown, zoomed, playbackRate }: Deps) {
   let holdTimer = 0;
   let held: HTMLVideoElement | null = null;
@@ -60,8 +60,8 @@ export function createSeek({ node, shown, zoomed, playbackRate }: Deps) {
     if (!v || e.target !== v || zoomed() || !e.isPrimary || e.button !== 0) return;
     holdTimer = setTimeout(() => {
       held = v;
-      v.playbackRate = HOLD_RATE;
-      toast(`${HOLD_RATE}×`);
+      v.playbackRate = playbackRate() * HOLD_FACTOR;
+      toast(`${v.playbackRate.toLocaleString('fr-FR')}×`);
     }, HOLD_DELAY);
   });
   const release = () => {

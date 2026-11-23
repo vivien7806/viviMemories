@@ -38,7 +38,7 @@ n'envoie pas ces en-têtes : la version en ligne les ajoute avec un service work
 ← → naviguer · Espace pause · V photos / vidéos · G aller à un numéro ou une date · + / − vitesse ·
 F plein écran · Échap fermer · I infos de lecture · R pivoter · W vent
 
-Vidéo : glisser le curseur de la barre du haut, ou cliquer à gauche / à droite de l'image pour reculer / avancer de 10 s ; rester appuyé lit en 2× jusqu'au relâchement.
+Vidéo : glisser le curseur de la barre du haut, ou cliquer à gauche / à droite de l'image pour reculer / avancer de 10 s ; rester appuyé double la vitesse jusqu'au relâchement (2× en 1×, 8× en 4×).
 
 ## Développer
 

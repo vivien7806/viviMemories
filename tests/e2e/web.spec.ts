@@ -197,7 +197,7 @@ test('glisse le curseur de la barre du haut, clic à gauche recule de 10 s', asy
   await expect(page.locator('#toast')).toContainText('−10 s');
 });
 
-test('appui maintenu sur la vidéo : 2× jusqu’au relâchement, sans saut', async ({ page }) => {
+test('appui maintenu sur la vidéo : vitesse doublée jusqu’au relâchement, sans saut', async ({ page }) => {
   await dropFolder(page);
   await expect(meta(page).name).toHaveText(ORDER[0]);
   await goTo(page, ORDER.indexOf('clip.mp4') + 1);
@@ -212,4 +212,10 @@ test('appui maintenu sur la vidéo : 2× jusqu’au relâchement, sans saut', as
   await page.mouse.up();
   await expect.poll(rate).toBe(1);
   expect(await video.evaluate((v: HTMLVideoElement) => v.currentTime)).toBeCloseTo(0.5, 1);
+
+  await page.locator('#rateSelect').selectOption('4');
+  await page.mouse.down();
+  await expect.poll(rate).toBe(8);
+  await page.mouse.up();
+  await expect.poll(rate).toBe(4);
 });
